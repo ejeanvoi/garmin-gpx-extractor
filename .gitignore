@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+
+# Config with credentials
+config/config.yaml
+
+# Output
+output/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

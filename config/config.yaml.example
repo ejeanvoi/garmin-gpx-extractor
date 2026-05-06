@@ -1,0 +1,16 @@
+# Garmin GPX Extractor Configuration
+# Copy this file to config.yaml and fill in your credentials
+
+garmin:
+  email: "YOUR_EMAIL_HERE"
+  password: "YOUR_PASSWORD_HERE"
+
+output:
+  directory: "output"
+  organize_by: ["type"]
+
+filters:
+  default_types: []
+  date_range:
+    start: null
+    end: null
