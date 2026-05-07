@@ -1,8 +1,11 @@
 """GPX file exporter with activity type organization."""
 
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime
+
+import click
 
 from src.utils import (
     extract_activity_type,
@@ -34,10 +37,40 @@ class GpxExporter:
         self.failed_count = 0
         self.failed_activities: List[Dict] = []
 
+    def _process_activity(self, activity: Dict, download_func):
+        """Process a single activity: download and save GPX."""
+        activity_id = extract_activity_id(activity)
+        if not activity_id:
+            self.failed_count += 1
+            self.failed_activities.append({
+                "activity": activity,
+                "error": "No activity ID found"
+            })
+            return
+
+        try:
+            gpx_content = download_func(activity_id)
+            if gpx_content:
+                self._save_gpx(activity, gpx_content)
+                self.exported_count += 1
+            else:
+                self.failed_count += 1
+                self.failed_activities.append({
+                    "activity": activity,
+                    "error": "Empty GPX content"
+                })
+        except Exception as e:
+            self.failed_count += 1
+            self.failed_activities.append({
+                "activity": activity,
+                "error": str(e)
+            })
+
     def export_activities(
         self,
         activities: List[Dict],
-        download_func
+        download_func,
+        total: Optional[int] = None
     ) -> Dict:
         """Export multiple activities to GPX files.
 
@@ -52,33 +85,20 @@ class GpxExporter:
         self.failed_count = 0
         self.failed_activities = []
 
-        for activity in activities:
-            activity_id = extract_activity_id(activity)
-            if not activity_id:
-                self.failed_count += 1
-                self.failed_activities.append({
-                    "activity": activity,
-                    "error": "No activity ID found"
-                })
-                continue
+        # Check if running in a TTY for progress bar support
+        has_progress = sys.stdout.isatty()
 
-            try:
-                gpx_content = download_func(activity_id)
-                if gpx_content:
-                    self._save_gpx(activity, gpx_content)
-                    self.exported_count += 1
-                else:
-                    self.failed_count += 1
-                    self.failed_activities.append({
-                        "activity": activity,
-                        "error": "Empty GPX content"
-                    })
-            except Exception as e:
-                self.failed_count += 1
-                self.failed_activities.append({
-                    "activity": activity,
-                    "error": str(e)
-                })
+        if has_progress and total:
+            with click.progressbar(
+                activities,
+                length=total,
+                label="Downloading GPX",
+            ) as progress_bar:
+                for activity in progress_bar:
+                    self._process_activity(activity, download_func)
+        else:
+            for activity in activities:
+                self._process_activity(activity, download_func)
 
         return self.get_summary()
 

@@ -176,7 +176,11 @@ def main(type, all, start, end, config, output_dir, clear_tokens):
     def download_gpx(activity_id):
         return client.download_gpx(activity_id)
 
-    export_summary = exporter.export_activities(activities, download_gpx)
+    export_summary = exporter.export_activities(
+        activities,
+        download_gpx,
+        total=len(activities)
+    )
 
     # Generate and display summary
     reporter = SummaryReporter()
