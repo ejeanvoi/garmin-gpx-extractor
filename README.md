@@ -7,8 +7,10 @@ Extract all your GPX activities from Garmin Connect, organized by activity type.
 - **Authentication**: Secure login with Garmin Connect credentials
 - **Activity Filtering**: Filter by activity type (running, cycling, hiking, etc.) and date range
 - **GPX Export**: Download all activities as GPX files
+- **Progress Bars**: Real-time progress indicators during downloads, visible in TTY terminal sessions
+- **Deduplication**: Skips activities already on disk (validates file completeness via XML parsing)
 - **Organized Output**: Files organized by activity type (`output/running/`, `output/cycling/`, etc.)
-- **Summary Report**: Detailed export summary with counts and statistics
+- **Summary Report**: Detailed export summary with counts, statistics, and skipped activity counts
 - **Environment Variables**: Support for secure credential management
 
 ## Installation
@@ -182,14 +184,17 @@ output/
     └── 20240201_080000_mountain_hike.gpx
 ```
 
+> **Note**: Re-running the tool with the same filters will skip activities already saved to disk. Only new or corrupted activities are re-downloaded. The progress bar shows the total count, and the summary report indicates how many were skipped.
+
 ## Example Summary Output
 
 ```
 === GPX Export Summary ===
-Total activities exported: 42
-  - running:     18 activities
-  - cycling:     15 activities
-  - hiking:       7 activities
+Total activities exported: 5
+Already on disk (skipped): 37
+  - running:    20 activities
+  - cycling:    15 activities
+  - hiking:      2 activities
 
 Date range: 2023-01-15 to 2024-12-28
 Failed exports: 0
@@ -246,8 +251,6 @@ python -m src.main --all --clear-tokens
 
 ```
 gpx-backup/
-├── plans/
-│   └── gpx-extractor-plan.md
 ├── src/
 │   ├── __init__.py
 │   ├── main.py              # CLI entry point
