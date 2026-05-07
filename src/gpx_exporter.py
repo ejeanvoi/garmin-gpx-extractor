@@ -1,6 +1,7 @@
 """GPX file exporter with activity type organization."""
 
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -35,6 +36,7 @@ class GpxExporter:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.exported_count = 0
         self.failed_count = 0
+        self.skipped_count = 0
         self.failed_activities: List[Dict] = []
 
     def _process_activity(self, activity: Dict, download_func):
@@ -46,6 +48,12 @@ class GpxExporter:
                 "activity": activity,
                 "error": "No activity ID found"
             })
+            return
+
+        # Check if already downloaded and file is complete
+        expected = self._get_expected_filepath(activity)
+        if expected is not None and self._is_file_complete(expected):
+            self.skipped_count += 1
             return
 
         try:
@@ -83,6 +91,7 @@ class GpxExporter:
         """
         self.exported_count = 0
         self.failed_count = 0
+        self.skipped_count = 0
         self.failed_activities = []
 
         # Check if running in a TTY for progress bar support
@@ -138,6 +147,57 @@ class GpxExporter:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(gpx_content)
 
+    def _get_expected_filepath(self, activity: Dict) -> Optional[Path]:
+        """Get the expected file path for this activity, if it exists on disk.
+
+        Uses the same naming logic as _save_gpx (including collision counter).
+        Returns None if no matching file is found.
+
+        Args:
+            activity: Activity dictionary
+
+        Returns:
+            Path to existing file, or None
+        """
+        activity_type = extract_activity_type(activity)
+        start_time = extract_activity_start_time(activity)
+        timestamp = format_timestamp(start_time)
+        name = sanitize_filename(extract_activity_name(activity))
+
+        type_dir = self.output_dir / activity_type
+
+        filename = f"{timestamp}_{name}.gpx"
+        filepath = type_dir / filename
+
+        # Follow same collision loop as _save_gpx, but find existing file
+        while filepath.exists():
+            return filepath
+        counter = 1
+        while True:
+            counter += 1
+            filename = f"{timestamp}_{name}_{counter}.gpx"
+            filepath = type_dir / filename
+            if filepath.exists():
+                return filepath
+            if counter > 100:  # safety cap
+                return None
+
+        return None
+
+    def _is_file_complete(self, filepath: Path) -> bool:
+        """Check if a GPX file is complete and valid (not truncated).
+
+        Args:
+            filepath: Path to the file to check
+
+        Returns:
+            True if the file is valid XML (complete), False otherwise
+        """
+        try:
+            ET.parse(str(filepath))
+            return True
+        except (ET.ParseError, OSError):
+            return False
 
     def get_summary(self) -> Dict:
         """Get export summary.
@@ -148,5 +208,6 @@ class GpxExporter:
         return {
             "exported": self.exported_count,
             "failed": self.failed_count,
+            "skipped": self.skipped_count,
             "failed_activities": self.failed_activities
         }

@@ -38,6 +38,7 @@ class SummaryReporter:
         self.output_dir = output_dir
         self.total_exported = export_summary.get("exported", 0)
         self.total_failed = export_summary.get("failed", 0)
+        self.total_skipped = export_summary.get("skipped", 0)
         self.failed_activities = export_summary.get("failed_activities", [])
 
         # Count by type
@@ -68,6 +69,8 @@ class SummaryReporter:
         lines.append("=== GPX Export Summary ===")
         lines.append("=" * 40)
         lines.append(f"Total activities exported: {self.total_exported}")
+        if self.total_skipped:
+            lines.append(f"Already on disk (skipped): {self.total_skipped}")
 
         if self.type_counts:
             # Sort by count descending
